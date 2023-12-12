@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>온라인 그림판</title>
+    <style>
+        canvas {
+            border: 1px solid black;
+        }
+        body {
+            margin-top: 20px;
+            margin-left: 260px;
+            margin-right: 250px;
+            margin-bottom: 20px;
+        }
+        #button {
+            margin-bottom: 10px;
+        }
+        canvas {
+            border: 1px solid black;
+        }
+        footer {
+            text-align: center;
+            margin-top: 10px;
+        }
+    </style>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.socket.io/4.1.3/socket.io.min.js"></script>
+    <script>
+        $(document).ready(function () {
+            const socket = io.connect('http://localhost:3000');
+            const canvas = document.getElementById('canvas');
+            const context = canvas.getContext('2d');
+            let isDrawing = false;
+            let lastX, lastY;
+            let color = 'black'; // Default color
+            let lineWidth = 1; // Default line width
+
+            // Mouse event listeners
+            canvas.addEventListener('mousedown', startDrawing);
+            canvas.addEventListener('mousemove', draw);
+            canvas.addEventListener('mouseup', stopDrawing);
+
+            // Button click event listeners
+            $('#pen').click(function () {
+                color = 'black';
+                lineWidth = $('#width').val();
+            });
+
+            $('#eraser').click(function () {
+                color = 'white';
+                // Set the eraser width to a specific value or use a default value
+                lineWidth = 20; // Adjust the value as needed
+            });
+
+            // Range input event listener for adjusting line width
+            $('#width').change(function () {
+                lineWidth = $(this).val();
+            });
+
+            // Socket.IO event listener for 'line' events
+            socket.on('line', function (data) {
+                drawLine(data);
+            });
+
+            // Functions to handle drawing
+            function startDrawing(event) {
+                isDrawing = true;
+                [lastX, lastY] = [event.pageX - canvas.offsetLeft, event.pageY - canvas.offsetTop];
+            }
+
+            function draw(event) {
+                if (!isDrawing) return;
+
+                const [x, y] = [event.pageX - canvas.offsetLeft, event.pageY - canvas.offsetTop];
+
+                socket.emit('line', { x1: lastX, y1: lastY, x2: x, y2: y, color: color, lineWidth: lineWidth });
+                drawLine({ x1: lastX, y1: lastY, x2: x, y2: y, color: color, lineWidth: lineWidth });
+
+                [lastX, lastY] = [x, y];
+            }
+
+            function stopDrawing() {
+                isDrawing = false;
+            }
+
+            function drawLine(data) {
+                context.beginPath();
+                context.lineWidth = data.lineWidth;
+                context.strokeStyle = data.color;
+                context.moveTo(data.x1, data.y1);
+                context.lineTo(data.x2, data.y2);
+                context.stroke();
+            }
+        });
+        
+    </script>
+</head>
+<body>
+    <div id="button">
+        <button id="pen">펜</button>
+        <button id="eraser">지우개</button>
+        <input id="width" type="range" min="1" max="100" value="1" />
+    </div>
+    <canvas id="canvas" width="1000" height="600"></canvas>
+    <footer><b>2302549문제희</b></footer>
+</body>
+</html>
